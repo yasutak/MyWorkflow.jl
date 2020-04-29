@@ -20,6 +20,7 @@
 # +
 using Plots
 using Interact
+using Random
 
 """
 Nₜ: number of trials
@@ -29,8 +30,10 @@ Pᵣ: probability of getting reward
 
 @manipulate for Nₜ = 0:1:500, α = 0:0.05:1, Pᵣ = 0:0.05:1
 
+    rng = MersenneTwister(1234) #create a seed for random numbers
+
     𝐕 = zeros(Nₜ) #strengths of association as Nₜ-length vector
-    𝐑 = rand(Nₜ) .< Pᵣ # presence of reinforcement (1 or 0) as Nₜ-length vector
+    𝐑 = rand(rng, Nₜ) .< Pᵣ # presence of reinforcement (1 or 0) as Nₜ-length vector
 
     for t in 1: Nₜ-1
 
@@ -77,6 +80,8 @@ Pᵣ: probability of getting reward in A
 
 @manipulate for Nₜ in 0:5:200, α in 0:0.05:1, β in 0:0.25:5, Pᵣ in 0:0.05:1
 
+    rng = MersenneTwister(1234)
+
     𝐐 = zeros((2, Nₜ)) #initial value of Q in 2 by Nₜ matrix
     𝐜 = zeros(Int, Nₜ) #initial choice in each Nₜ trial
     𝐫 = zeros(Nₜ) # 0 (no reward) or 1 (reward) in each Nₜ trial
@@ -86,12 +91,12 @@ Pᵣ: probability of getting reward in A
     for t in 1:Nₜ-1
         Pₐ = softmax(β, 𝐐[1, t] - 𝐐[2, t])
 
-        if rand() < Pₐ
+        if rand(rng) < Pₐ
             𝐜[t] = 1 #choose A
-            𝐫[t] = Int(rand(Float64) < P[1])
+            𝐫[t] = Int(rand(rng) < P[1])
         else
             𝐜[t] = 2 #choose B
-            𝐫[t] = Int(rand(Float64) < P[2])
+            𝐫[t] = Int(rand(rng) < P[2])
         end
 
         𝐐[𝐜[t], t+1] = 𝐐[𝐜[t], t] + α * (𝐫[t] - 𝐐[𝐜[t], t])
@@ -194,7 +199,7 @@ using BlackBoxOptim
 
 @manipulate for Nₜ in 0:5:200, α in 0:0.05:1, β in 0:0.25:5, Pᵣ in 0:0.05:1
     𝐜, 𝐫 = generate_qlearning_data(Nₜ, α, β, Pᵣ)
-    
+
     func_qlearning_opt(init_values) = func_qlearning(init_values, 𝐜, 𝐫).negll
 
     results = bboptimize(func_qlearning_opt; SearchRange = [(0.0, 1.0), (0.0, 5.0)], NumDimensions = 2);
