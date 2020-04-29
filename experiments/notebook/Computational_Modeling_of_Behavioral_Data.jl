@@ -209,6 +209,7 @@ end
 
 # We can also compare performances when using different optimizers.
 
+𝐜, 𝐫 = generate_qlearning_data(100, 0.3, 1.2, 0.5) #dammy data
 func_qlearning_opt(init_values) = func_qlearning([0.3, 0.4], 𝐜, 𝐫).negll
 compare_optimizers(func_qlearning_opt; SearchRange = [(0.0, 1.0), (0.0, 5.0)], NumDimensions = 2);
 
@@ -232,5 +233,3 @@ register(m, :func_qlearning_JuMP, 2, func_qlearning_JuMP, autodiff=true)
 @show optimize!(m)
 println("α = ", value(x), " β = ", value(y))
 # -
-
-
