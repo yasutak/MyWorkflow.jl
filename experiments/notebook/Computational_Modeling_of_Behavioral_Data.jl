@@ -50,8 +50,6 @@ end
 # -
 
 # ## Q-learning simulation
-#
-#
 # ### softmax function
 
 # +
@@ -114,14 +112,9 @@ Pᵣ: probability of getting reward in A
 end
 # -
 
-# ## Parameter Estimation
+# ## Parameter Estimation of Q-learing model
 #
-# ### Optimization with Optim package
-
-# +
-"""
-This function returns a vector of choices and a vector of rewards, both of which will be used for parameter estimation
-"""
+# ### Preparation
 
 function generate_qlearning_data(Nₜ, α, β, Pᵣ)
 
@@ -136,10 +129,10 @@ function generate_qlearning_data(Nₜ, α, β, Pᵣ)
 
         if rand() < Pₐ
             𝐜[t] = 1 #choose A
-            𝐫[t] = (rand(Float64) < P[1])
+            𝐫[t] = (rand() < P[1])
         else
             𝐜[t] = 2 #choose B
-            𝐫[t] = Int(rand(Float64) < P[2])
+            𝐫[t] = Int(rand() < P[2])
         end
 
         𝐐[𝐜[t], t+1] = 𝐐[𝐜[t], t] + α * (𝐫[t] - 𝐐[𝐜[t], t])
@@ -149,21 +142,18 @@ function generate_qlearning_data(Nₜ, α, β, Pᵣ)
     return 𝐜, 𝐫
 end
 
-# +
 """
 init_values: [α, β]
 α: learning rate
 β: inverse temperature
 𝐜: vector of choices in each Nₜ trial in 1(A) or 2(B)
 𝐫: 0 (no reward) or 1 (reward) in each Nₜ trial
-
 """
-
-function func_qlearning(init_values, 𝐜, 𝐫) #needed for parameters to be passed as list for Optim package
+function func_qlearning(init_values, 𝐜, 𝐫) #needed for passing list as variables for Optim
 
     Nₜ = length(𝐜)
     Pₐ = zeros(Nₜ) #probabilities of selecting A
-    𝐐 = zeros((2, Nₜ))
+    𝐐 = zeros(Real, (2, Nₜ))
     logl = 0 #initial value of log likelihood
 
     for t in 1:Nₜ - 1
@@ -175,6 +165,32 @@ function func_qlearning(init_values, 𝐜, 𝐫) #needed for parameters to be pa
 
     return (negll = -logl, 𝐐 = 𝐐, Pₐ = Pₐ);
 end
+
+# ## Parameter Estimation
+#
+# ### optimization with JuMP and Ipopt
+
+# +
+using JuMP, Ipopt, ForwardDiff
+
+@manipulate for Nₜ in 0:50:1000, α1 in 0:0.05:1, β1 in 0:0.25:5, Pᵣ in 0:0.05:1
+
+    𝐜, 𝐫 = generate_qlearning_data(Nₜ, α1, β1, Pᵣ)
+    func_qlearning_JuMP(α, β) = func_qlearning((α, β), 𝐜, 𝐫).negll #JuMP requires separate arguments, not a list
+
+    m = Model(Ipopt.Optimizer)
+    register(m, :func_qlearning_JuMP, 2, func_qlearning_JuMP, autodiff=true)
+
+    @variable(m, 0.0 <= α <= 1.0, start=rand(), base_name = "learning_rate")
+    @variable(m, 0.0 <= β <= 5.0, start=5*rand(), base_name = "inverse_temperature")
+
+    @NLobjective(m, Min, func_qlearning_JuMP(α, β))
+    optimize!(m)
+    print(""," α = ", value(α), " β = ", value(β))
+end
+# -
+
+# ### optimization with Optim
 
 # +
 using Optim
@@ -188,11 +204,12 @@ using Optim
     lower = [0.0, 0.0]
     upper = [1.0, 5.0]
     inner_optimizer = GradientDescent()
-    results = optimize(func_qlearning_opt, lower, upper, initial_values, Fminbox(inner_optimizer));
+    results = optimize(func_qlearning_opt, lower, upper, initial_values, Fminbox(inner_optimizer))
+    #@show optimize(func_qlearning_opt, init_values, lower, upper, LBFGS())
 end
 # -
 
-# #### optimization with BlackBoxOptim package
+# ### optimization with BlackBoxOptim, which is designed for blackbox functions, so this part is only for demonstration purpose
 
 # +
 using BlackBoxOptim
@@ -207,29 +224,11 @@ using BlackBoxOptim
 end
 # -
 
-# We can also compare performances when using different optimizers.
-
-𝐜, 𝐫 = generate_qlearning_data(100, 0.3, 1.2, 0.5)
-func_qlearning_opt(init_values) = func_qlearning(init_values, 𝐜, 𝐫).negll
-compare_optimizers(func_qlearning_opt; SearchRange = [(0.0, 1.0), (0.0, 5.0)], NumDimensions = 2);
-
-# #### optimization with JuMP and Ipopt packages
+# #### We can also compare performances when using different optimizers.
 
 # +
-#The following code block generates error. How can I fix it?
+#this cell takes a lot time to run, so execute it only if you want to
 
-using JuMP, Ipopt, ForwardDiff
-
-𝐜, 𝐫 = generate_qlearning_data(50, 0.6, 0.7, 0.5)
-
-func_qlearning_JuMP(α, β) = func_qlearning((α, β), 𝐜, 𝐫).negll #JuMP needs separate variables, not a list
-
-m = Model(Ipopt.Optimizer)
-register(m, :func_qlearning_JuMP, 2, func_qlearning_JuMP, autodiff=true)
-
-@variable(m, 0.0 <= x <= 1.0, start=rand())
-@variable(m, 0.0 <= y <= 5.0, start=5*rand())
-@NLobjective(m, Min, func_qlearning_JuMP(x, y))
-@show optimize!(m)
-println("α = ", value(x), " β = ", value(y))
-# -
+#𝐜, 𝐫 = generate_qlearning_data(100, 0.3, 1.2, 0.5)
+#func_qlearning_opt(init_values) = func_qlearning(init_values, 𝐜, 𝐫).negll
+#compare_optimizers(func_qlearning_opt; SearchRange = [(0.0, 1.0), (0.0, 5.0)], NumDimensions = 2);
