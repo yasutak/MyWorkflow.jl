@@ -78,9 +78,8 @@ end\n\
 # Install Julia Package
 RUN julia -E 'using Pkg; \
 Pkg.add(["Atom", "Juno"]); \
-Pkg.add(["Pkg"]); \
+Pkg.add(["BinaryProvider"]); \
 Pkg.add(["Random", "Optim", "BlackBoxOptim", "JuMP", "Ipopt", "ForwardDiff"]);\
-Pkg.build("Ipopt");\
 Pkg.add(["OhMyREPL", "Revise"]); \
 Pkg.add(["Plots", "GR", "PyCall", "DataFrames"]); \
 Pkg.add("PackageCompiler"); \
