@@ -173,9 +173,14 @@ end
 # +
 using JuMP, Ipopt, ForwardDiff
 
-@manipulate for Nₜ in 0:50:1000, α1 in 0:0.05:1, β1 in 0:0.25:5, Pᵣ in 0:0.05:1
+#@manipulate for Nₜ in 0:50:1000, α1 in 0:0.05:1, β1 in 0:0.25:5, Pᵣ in 0:0.05:1
 
-    𝐜, 𝐫 = generate_qlearning_data(Nₜ, α1, β1, Pᵣ)
+    N₀ = 500
+    α₀ = 0.5
+    β₀ = 2.5
+    P₀ = 0.5
+
+    𝐜, 𝐫 = generate_qlearning_data(N₀, α₀, β₀, P₀)
     func_qlearning_JuMP(α, β) = func_qlearning((α, β), 𝐜, 𝐫).negll #JuMP requires separate arguments, not a list
 
     m = Model(Ipopt.Optimizer)
