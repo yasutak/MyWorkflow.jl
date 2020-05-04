@@ -17,11 +17,11 @@
 #
 # ## Rescorla-Wagner model
 
-# +
 using Plots
 using Interact
 using Random
 
+# +
 """
 Nₜ: number of trials
 α: learning rate
@@ -52,7 +52,6 @@ end
 # ## Q-learning simulation
 # ### softmax function
 
-# +
 function softmax(β, Δq)
     return 1 / (1+ exp(-β * (Δq)))
 end
@@ -64,7 +63,6 @@ end
     ylims!((0, 1))
     title!("Softmax Function")
 end
-# -
 
 # ### interactive plot of Q-learning model
 
@@ -80,7 +78,7 @@ Pᵣ: probability of getting reward in A
 
     rng = MersenneTwister(1234)
 
-    𝐐 = zeros((2, Nₜ)) #initial value of Q in 2 by Nₜ matrix
+    𝐐 = zeros(Real, (2, Nₜ)) #initial value of Q in 2 by Nₜ matrix
     𝐜 = zeros(Int, Nₜ) #initial choice in each Nₜ trial
     𝐫 = zeros(Nₜ) # 0 (no reward) or 1 (reward) in each Nₜ trial
     Pₐ = zeros(Nₜ) # probability of choosing A in each trial
@@ -170,16 +168,20 @@ end
 #
 # ### optimization with JuMP and Ipopt
 
-# +
-#if you get no package error for Ipopt, comment out the follwoing lines and run again
-#import Pkg
-#Pkg.add("Pkg")
-#Pkg.add("Ipopt")
-#Pkg.build("Ipopt")
+import Pkg
+Pkg.add("Pkg")
+Pkg.add("Ipopt")
+Pkg.build("Ipopt")
 
+# +
 using JuMP, Ipopt, ForwardDiff
 
 #@manipulate for Nₜ in 0:50:1000, α1 in 0:0.05:1, β1 in 0:0.25:5, Pᵣ in 0:0.05:1
+
+Nₜ=500
+α1 = 0.3
+β1 = 0.2
+Pᵣ = 0.5
 
 𝐜, 𝐫 = generate_qlearning_data(Nₜ, α1, β1, Pᵣ)
 func_qlearning_JuMP(α, β) = func_qlearning((α, β), 𝐜, 𝐫).negll #JuMP requires separate arguments, not a list
